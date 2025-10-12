@@ -1,23 +1,59 @@
-create database prescription;
+CREATE DATABASE IF NOT EXISTS prescription;
+USE prescription;
 
-create table doctor (
-	id int primary key auto_increment,
-    ssn varchar(9) not null unique,
-    last_name varchar(30) not null,
-    first_name varchar(30) not null,
-    specialty varchar(30),
-    practice_since int
+CREATE TABLE doctor (
+    id INT NOT NULL AUTO_INCREMENT,
+    ssn VARCHAR(9) NOT NULL UNIQUE,
+    last_name VARCHAR(30) NOT NULL,
+    first_name VARCHAR(30) NOT NULL,
+    specialty VARCHAR(30),
+    practice_since INT,
+    PRIMARY KEY (id)
 );
 
-create table patient (
-	id int primary key auto_increment,
-    doctor_id int not null references doctor(id),
-    ssn varchar(9) not null unique,
-    first_name varchar(30) not null,
-    last_name varchar(30) not null,
-    birthdate date not null,
-    street varchar(45),
-    city varchar(45),
-    state varchar(45),
-    zipcode varchar(45)
+CREATE TABLE patient (
+    id INT NOT NULL AUTO_INCREMENT,
+    ssn VARCHAR(9) NOT NULL UNIQUE,
+    first_name VARCHAR(45) NOT NULL,
+    last_name VARCHAR(45) NOT NULL,
+    birthdate DATE NOT NULL,
+    street VARCHAR(100) NOT NULL,
+    city VARCHAR(45) NOT NULL,
+    state CHAR(2) NOT NULL,
+    zipcode CHAR(5) NOT NULL,
+    doctor_id INT NULL,
+    PRIMARY KEY (id),
+    KEY idx_patient_last_name (last_name),
+    CONSTRAINT fk_patient_doctor1
+    FOREIGN KEY (doctor_id) REFERENCES doctor(id)
+    ON DELETE SET NULL
+    ON UPDATE CASCADE
+);
+
+CREATE TABLE drug (
+    DrugID INT NOT NULL AUTO_INCREMENT,
+    DrugName VARCHAR(45) NOT NULL,
+    PRIMARY KEY (DrugID),
+    UNIQUE KEY uq_drug_drugname (DrugName)
+);
+
+CREATE TABLE prescription (
+    RXID INT NOT NULL AUTO_INCREMENT,
+    Doctor_ID INT NOT NULL,
+    Patient_ID INT NOT NULL,
+    Drug_DrugID INT NOT NULL,
+    Quantity INT NOT NULL,
+    NumOfRefills INT NOT NULL,
+    PRIMARY KEY (RXID),
+    CONSTRAINT fk_prescription_doctor1
+    FOREIGN KEY (Doctor_ID)   REFERENCES doctor(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_prescription_patient1
+    FOREIGN KEY (Patient_ID)  REFERENCES patient(id)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_prescription_drug1
+    FOREIGN KEY (Drug_DrugID) REFERENCES drug(DrugID)
+    ON DELETE CASCADE ON UPDATE CASCADE
 );
