@@ -58,7 +58,7 @@ CREATE TABLE prescription (
     ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE TABLE pharmacy(
+CREATE TABLE pharmacy (
     ID INT NOT NULL AUTO_INCREMENT,
     Name VARCHAR(45) NOT NULL,
     Address VARCHAR(45) NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE pharmacy(
     PRIMARY KEY (ID)
 );
 
-CREATE TABLE pharmacy_has_drug(
+CREATE TABLE pharmacy_has_drug (
     Pharmacy_ID INT NOT NULL,
     Drug_DrugID INT NOT NULL,
     UnitAmount INT,
@@ -76,7 +76,24 @@ CREATE TABLE pharmacy_has_drug(
     CONSTRAINT fk_drug_has_pharmacy_drug1
     FOREIGN KEY (Drug_DrugID) REFERENCES drug(DrugID)
     ON DELETE CASCADE ON UPDATE CASCADE,
+
     CONSTRAINT fk_drug_has_pharmacy_pharmacy1
+    FOREIGN KEY (Pharmacy_ID) REFERENCES pharmacy(ID)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE prescriptionfill(
+    FillID INT NOT NULL AUTO_INCREMENT,
+    Prescription_RXID INT NOT NULL,
+    Pharmacy_ID INT NOT NULL,
+    DateFilled DATE NOT NULL,
+    Price DECIMAL(10,2),
+    PRIMARY KEY (FillID),
+    CONSTRAINT fk_prescriptionfill_prescription1
+    FOREIGN KEY (Prescription_RXID) REFERENCES prescription(RXID)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+
+    CONSTRAINT fk_prescriptionfill_pharmacy1
     FOREIGN KEY (Pharmacy_ID) REFERENCES pharmacy(ID)
     ON DELETE CASCADE ON UPDATE CASCADE
 );
