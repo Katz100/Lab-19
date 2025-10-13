@@ -65,3 +65,18 @@ CREATE TABLE pharmacy(
     PhoneNumber VARCHAR(45),
     PRIMARY KEY (ID)
 );
+
+CREATE TABLE pharmacy_has_drug(
+    Pharmacy_ID INT NOT NULL,
+    Drug_DrugID INT NOT NULL,
+    UnitAmount INT,
+    UnitForm VARCHAR(45),
+    Price DECIMAL(10,2),
+    PRIMARY KEY (Drug_DrugID, Pharmacy_ID),
+    CONSTRAINT fk_drug_has_pharmacy_drug1
+    FOREIGN KEY (Drug_DrugID) REFERENCES drug(DrugID)
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_drug_has_pharmacy_pharmacy1
+    FOREIGN KEY (Pharmacy_ID) REFERENCES pharmacy(ID)
+    ON DELETE CASCADE ON UPDATE CASCADE
+);
