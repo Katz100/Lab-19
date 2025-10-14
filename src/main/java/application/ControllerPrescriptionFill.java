@@ -2,7 +2,6 @@ package application;
 
 import java.math.BigDecimal;
 import java.sql.*;
-import java.time.LocalDate;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
