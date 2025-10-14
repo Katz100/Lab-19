@@ -90,9 +90,5 @@ CREATE TABLE prescription_fill
         FOREIGN KEY (pharmacy_id)
             REFERENCES pharmacy (pharmacy_id)
             ON DELETE SET NULL,
-    CONSTRAINT fk_drug_price
-        FOREIGN KEY (price)
-            REFERENCES drug (IdvDrugPrice)
-            ON DELETE SET NULL
 
 );
