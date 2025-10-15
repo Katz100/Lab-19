@@ -31,16 +31,12 @@ public class ControllerPrescriptionFill {
     @PostMapping("/prescription/fill")
     public String processFillForm(PrescriptionView p, Model model) {
         int pharmacyId = 0;
-        int patientId = 0;
-        int drugId = 0;
-        BigDecimal totalPrice = BigDecimal.valueOf(0.0);
-
 
         /*
          * validate pharmacy name and address, get pharmacy id and phone
          */
         try (Connection con = getConnection();) {
-            PreparedStatement ps = con.prepareStatement("select pharmacy_id, phone from pharmacy where name = ? and address = ?");
+            PreparedStatement ps = con.prepareStatement("select ID, PhoneNumber from pharmacy where Name = ? and Address = ?");
             ps.setString(1, p.getPharmacyName());
             ps.setString(2, p.getPharmacyAddress());
 
@@ -52,8 +48,8 @@ public class ControllerPrescriptionFill {
                 model.addAttribute("prescription", p);
                 return "prescription_fill";
             }
-            pharmacyId = rs.getInt("pharmacy_id");
-            String pharmacyPhone = rs.getString("phone");
+            pharmacyId = rs.getInt("ID");
+            String pharmacyPhone = rs.getString("PhoneNumber");
             p.setPharmacyID(pharmacyId);
             p.setPharmacyPhone(pharmacyPhone);
             p.setPharmacyAddress(p.getPharmacyAddress());
@@ -71,7 +67,7 @@ public class ControllerPrescriptionFill {
          */
         try (Connection con = getConnection();) {
             PreparedStatement ps = con.prepareStatement(
-                    "select pr.RXID, pt.id, pt.first_name, pt.last_name, pr.Quantity, pr.NumOfRefills, pr.Patient_ID, pr.Drug_DrugID " +
+                    "select pt.id, pt.first_name, pt.last_name " +
                             "from prescription pr " +
                             "join patient pt on pr.Patient_ID = pt.id " +
                             "where pr.RXID = ?"
@@ -85,10 +81,7 @@ public class ControllerPrescriptionFill {
                 return "prescription_fill";
             }
 
-            String ptFirstName = rs.getString("first_name");
             String ptLastName = rs.getString("last_name");
-            int ptId = rs.getInt("id");
-
 
             if (!p.getPatientLastName().equalsIgnoreCase(ptLastName)) {
                 model.addAttribute("message", "Patient last name does not match");
@@ -96,8 +89,8 @@ public class ControllerPrescriptionFill {
                 return "prescription_fill";
             }
             p.setPatientLastName(ptLastName);
-            p.setPatientFirstName(ptFirstName);
-            p.setPatient_id(ptId);
+            p.setPatientFirstName(rs.getString("first_name"));
+            p.setPatient_id(rs.getInt("id"));
 
         } catch (SQLException e) {
             System.err.println("Database error: " + e.getMessage());
@@ -114,7 +107,7 @@ public class ControllerPrescriptionFill {
 
         try (Connection con = getConnection()) {
             PreparedStatement ps = con.prepareStatement(
-                    "select Quantity, NumOfRefills from prescription where rxid = ?"
+                    "select Quantity, NumOfRefills from prescription where RXID = ?"
             );
             ps.setInt(1, p.getRxid());
             ResultSet rs = ps.executeQuery();
@@ -131,7 +124,7 @@ public class ControllerPrescriptionFill {
             p.setRefills(numRefills);
 
             PreparedStatement ps2 = con.prepareStatement(
-                    "select COUNT(*) as fill_count from prescription_fill where rxid = ?"
+                    "select COUNT(*) as fill_count from prescriptionfill where Prescription_RXID = ?"
             );
             ps2.setInt(1, p.getRxid());
             ResultSet rs2 = ps2.executeQuery();
@@ -162,7 +155,7 @@ public class ControllerPrescriptionFill {
             PreparedStatement ps = con.prepareStatement(
                     "select d.id, d.first_name, d.last_name from doctor d " +
                             "join prescription p on d.id = p.Doctor_ID " +
-                            "where rxid = ?"
+                            "where RXID = ?"
             );
             ps.setInt(1, p.getRxid());
             ResultSet rs = ps.executeQuery();
@@ -173,12 +166,10 @@ public class ControllerPrescriptionFill {
                 model.addAttribute("prescription", p);
                 return "prescription_fill";
             }
-            String drFirstName = rs.getString("first_name");
-            String drLastName = rs.getString("last_name");
-            int dr_id = rs.getInt("id");
-            p.setDoctorLastName(drLastName);
-            p.setDoctorFirstName(drFirstName);
-            p.setDoctor_id(dr_id);
+;
+            p.setDoctorLastName(rs.getString("last_name"));
+            p.setDoctorFirstName(rs.getString("first_name"));
+            p.setDoctor_id(rs.getInt("id"));
 
         } catch (SQLException e) {
             model.addAttribute("message", "Error verifying refill: " + e.getMessage());
@@ -191,26 +182,29 @@ public class ControllerPrescriptionFill {
          */
         try (Connection con = getConnection()) {
             PreparedStatement ps = con.prepareStatement(
-                    "select d.DrugName, d.IndvDrugPrice * p.Quantity as total_price " +
-                            "from drug d " +
-                            "join prescription p on d.DrugID = p.Drug_DrugID " +
-                            "where p.rxid = ?"
+                    "select d.DrugName, phd.Price * p.Quantity as total_price " +
+                            "from prescription p " +
+                            "join drug d on d.DrugID = p.Drug_DrugID " +
+                            "join pharmacy_has_drug phd on phd.Drug_DrugID = d.DrugID " +
+                            "where p.RXID = ? and phd.Pharmacy_ID = ?"
             );
             ps.setInt(1, p.getRxid());
+            ps.setInt(2, p.getPharmacyID());
             ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
-                totalPrice = rs.getBigDecimal("total_price");
-                String drugName = rs.getString("DrugName");
-                model.addAttribute("totalPrice", totalPrice);
-                p.setCost(totalPrice.toString());
-                p.setDrugName(drugName);
-            }
-            else {
-                model.addAttribute("message", "Unable to calculate price — prescription not found.");
+            if (!rs.next()) {
+                model.addAttribute("message", "Unable to calculate price — drug not stocked at this pharmacy.");
                 model.addAttribute("prescription", p);
                 return "prescription_fill";
             }
+
+            BigDecimal totalPrice = rs.getBigDecimal("total_price");
+            String drugName = rs.getString("DrugName");
+
+            p.setCost(totalPrice.toString());
+            p.setDrugName(drugName);
+            model.addAttribute("totalPrice", totalPrice);
+
 
         } catch (SQLException e) {
             model.addAttribute("message", "Error verifying price: " + e.getMessage());
@@ -221,14 +215,14 @@ public class ControllerPrescriptionFill {
         //record date that prescription was filled
         try (Connection con = getConnection()) {
             PreparedStatement ps = con.prepareStatement(
-                    "select date_filled from prescription_fill where rxid = ? " +
-                            "order by date_filled desc limit 1"
+                    "select DateFilled from prescriptionfill where Prescription_RXID = ? " +
+                            "order by DateFilled desc limit 1"
             );
             ps.setInt(1, p.getRxid());
             ResultSet rs = ps.executeQuery();
 
             if(rs.next()) {
-                Date dateFilled = rs.getDate("date_filled");
+                Date dateFilled = rs.getDate("DateFilled");
                 p.setDateFilled(dateFilled.toString());
             }
         } catch(SQLException e) {
@@ -240,12 +234,15 @@ public class ControllerPrescriptionFill {
         // save updated prescription
         try (Connection con = getConnection();) {
             PreparedStatement ps = con.prepareStatement(
-                    "insert into prescription_fill (RXID, pharmacy_id, date_filled, price) values (?, ?, CURRENT_DATE, ?)"
+                    "insert into prescriptionfill (Prescription_RXID, Pharmacy_Id, DateFilled, Price) values (?, ?, CURRENT_DATE, ?)"
+
             );
+
             ps.setInt(1, p.getRxid());
-            ps.setInt(2, pharmacyId);
-            ps.setBigDecimal(3, totalPrice);
+            ps.setInt(2, p.getPharmacyID());
+            ps.setBigDecimal(3, new BigDecimal(p.getCost()));
             ps.executeUpdate();
+
         } catch (SQLException e) {
             model.addAttribute("message", "Error updating prescription: " + e.getMessage());
             model.addAttribute("prescription", p);
